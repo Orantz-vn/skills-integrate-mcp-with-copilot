@@ -3,6 +3,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const signupContainer = document.getElementById("signup-container");
+  const loginContainer = document.getElementById("login-container");
+  const loginForm = document.getElementById("login-form");
+  const loginMessage = document.getElementById("login-message");
+  const loginButton = document.getElementById("login-button");
+  const logoutButton = document.getElementById("logout-button");
+  const teacherStatus = document.getElementById("teacher-status");
+
+  function showLoginMessage(message, isError = true) {
+    loginMessage.textContent = message;
+    loginMessage.className = `message ${isError ? "error" : "success"}`;
+  }
+
+  async function updateAuthState() {
+    const response = await fetch("/auth/session");
+    if (!response.ok) {
+      throw new Error("Failed to check teacher login status");
+    }
+    const session = await response.json();
+    signupContainer.classList.toggle("hidden", !session.authenticated);
+    loginButton.classList.toggle("hidden", session.authenticated);
+    logoutButton.classList.toggle("hidden", !session.authenticated);
+    teacherStatus.classList.toggle("hidden", !session.authenticated);
+    teacherStatus.textContent = session.authenticated
+      ? `Logged in as ${session.username}`
+      : "";
+    document.querySelectorAll(".delete-btn").forEach((button) => {
+      button.classList.toggle("hidden", !session.authenticated);
+    });
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -12,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      activitySelect.replaceChildren(new Option("-- Select an activity --", ""));
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -60,12 +91,59 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".delete-btn").forEach((button) => {
         button.addEventListener("click", handleUnregister);
       });
+      await updateAuthState();
     } catch (error) {
       activitiesList.innerHTML =
         "<p>Failed to load activities. Please try again later.</p>";
       console.error("Error fetching activities:", error);
     }
   }
+
+  loginButton.addEventListener("click", () => {
+    loginContainer.classList.remove("hidden");
+    loginMessage.classList.add("hidden");
+  });
+
+  document.getElementById("cancel-login").addEventListener("click", () => {
+    loginContainer.classList.add("hidden");
+    loginForm.reset();
+  });
+
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const credentials = Object.fromEntries(new FormData(loginForm));
+    try {
+      const response = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        showLoginMessage(result.detail || "Unable to log in");
+        return;
+      }
+      loginForm.reset();
+      loginContainer.classList.add("hidden");
+      await fetchActivities();
+    } catch (error) {
+      showLoginMessage("Unable to log in. Please try again.");
+      console.error("Error logging in:", error);
+    }
+  });
+
+  logoutButton.addEventListener("click", async () => {
+    try {
+      const response = await fetch("/auth/logout", { method: "POST" });
+      if (!response.ok) {
+        throw new Error("Failed to log out");
+      }
+      await fetchActivities();
+    } catch (error) {
+      console.error("Error logging out:", error);
+      showLoginMessage("Unable to log out. Please try again.");
+    }
+  });
 
   // Handle unregister functionality
   async function handleUnregister(event) {
