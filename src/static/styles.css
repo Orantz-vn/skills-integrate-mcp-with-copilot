@@ -16,12 +16,26 @@ body {
 }
 
 header {
+  position: relative;
   text-align: center;
   padding: 20px 0;
   margin-bottom: 30px;
   background-color: #1a237e;
   color: white;
   border-radius: 5px;
+}
+
+#auth-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+#teacher-status {
+  font-weight: bold;
 }
 
 header h1 {
@@ -190,6 +204,16 @@ button:hover {
 
 .hidden {
   display: none;
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 12px;
+  }
+
+  header {
+    padding: 16px 12px;
+  }
 }
 
 footer {
